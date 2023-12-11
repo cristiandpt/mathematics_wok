@@ -4,6 +4,7 @@ using GLMakie
 using UUIDs
 using LaTeXStrings
 using Roots
+using DifferentialEquations
 
 # Define the solution function
 function y_solution(x, a, b, h)
@@ -421,4 +422,319 @@ function plottingNonNumerialAproximation()
     display(fig)
 end
 
-end # module edo_task_2
+
+#= foreach((quadrant, index) -> begin
+        x_values = -9.0:00.1:9.0
+        y_values = map( x -> f(x, a_values[index], b_values[index], h_values[index]), x_values)
+        scatter!(
+            b_values[index], 
+            f(b_values[index], a_values[index], b_values[index], h_values[index]), 
+            color = :red, 
+            markersize = 20, 
+            label = "(b, 0)"
+        )
+        lines!(quadrant[index], x_values, y_values, label = "cosh")
+        text!(b_values[index] + 0.5, 20, text = L"(%$a,%$h)", color = :black)
+        text!(-4.5, 500, text =  L"f(x)=cosh(\frac{x-b}{a}) + h", color = :black)
+        vlines!(quadrant[index], [b_values[index]], color = :red, linestyle = :dash)
+        hlines!(quadrant[index], [h_values[index]], xmax = [1], color = :blue, linestyle = :dash)
+        display(fig)
+        uuid = UUIDs.uuid4()
+        save("$uuid.png", fig)    
+    end, quadrants) =#
+
+
+    function plot_pendulum_system()
+        # Define the parameters
+        g = 9.8  # Acceleration due to gravity (m/s^2)
+        l = 0.5  # Length of the pendulum (m)
+        gamma = 0.5  # Damping coefficient (kg/s)
+        m = 1.0  # Mass of the pendulum (kg)
+
+        # Define the function for the system of differential equations
+        function pendulum(t, y)
+            theta = y[1]
+            theta_dot = y[2]
+            return [theta_dot, -g/l * theta - gamma/m * theta_dot]
+        end
+
+        # Define the initial conditions
+        theta0 = pi/5  # Initial angle (rad)
+        theta_dot0 = 0.0  # Initial angular velocity (rad/s)
+        y0 = [theta0, theta_dot0]
+
+        # Define the time span
+        t_start = 0.0
+        t_end = 10.0
+        dt = 0.01
+        t = t_start:dt:t_end
+
+        # Use the Runge-Kutta method to solve the system of differential equations
+        function runge_kutta(f, t, y0)
+            y = zeros(length(t), length(y0))
+            y[1, :] = y0
+            for i in 1:length(t)-1
+                h = t[i+1] - t[i]
+                k1 = f(t[i], y[i, :])
+                k2 = f(t[i] + h/2, y[i, :] + h/2 * k1)
+                k3 = f(t[i] + h/2, y[i, :] + h/2 * k2)
+                k4 = f(t[i] + h, y[i, :] + h * k3)
+                y[i+1, :] = y[i, :] + (h/6) * (k1 + 2*k2 + 2*k3 + k4)
+            end
+            return y
+        end
+
+        # Solve the system of differential equations
+        y = runge_kutta(pendulum, t, y0)
+
+        # Extract the angles and angular velocities
+        theta = y[:, 1]
+        theta_dot = y[:, 2]
+        fig = Figure()
+        ax = Axis(fig[1, 1])
+        lines!(ax, t, theta, label="y(x)")
+        uuid = UUIDs.uuid4()
+        save("$uuid.png", fig)
+        display(fig)
+    end    
+
+
+    function plot_pendulum_system_differential_equations_library()
+
+        # Define the parameters
+        g = 9.8  # Acceleration due to gravity (m/s^2)
+        l = 1.0  # Length of the pendulum (m)
+        gamma = 0.5  # Damping coefficient (kg/s)
+        m = 1.0  # Mass of the pendulum (kg)
+
+        # Define the initial conditions
+        theta0 = pi/5  # Initial angle (rad)
+        theta_dot0 = 0.0  # Initial angular velocity (rad/s)
+
+         # Define the function for the system of differential equations
+        pendulum!( du, u, p, t) = -(g/l)sin(u) - (gamma/m)du
+        # Define the time span
+        t_start = 0.0
+        t_end = 10.0
+        tspan = (t_start, t_end)
+
+        # Solve the system of differential equations
+        prob = SecondOrderODEProblem(pendulum!, theta_dot0, theta0, tspan)
+        sol = solve(prob, DPRKN6(), saveat=0.05) # Runge-Kutta-Nyström 6 order numerical method.
+
+        # Extract the angles and angular velocities
+        theta = [odeSolutionTuple[begin] for odeSolutionTuple in sol.u]
+        theta_dot = [odeSolutionTuple[end] for odeSolutionTuple in sol.u]
+        println(theta)
+        fig = Figure()
+        ax = Axis(fig[1, 1])
+       
+        text!(.75, 1.25, text = L"\theta(t)", color = :black)
+        lines!(ax, sol.t, theta, label=L"\theta(t)")
+        lines!(ax, sol.t, theta_dot, label=L"\theta^{\prime}(t)")
+        fig[1, 2] = Legend(fig, ax, "Pendulum system", framevisible = false)
+        uuid = UUIDs.uuid4()
+        save("$uuid.png", fig)
+        display(fig) 
+    end
+
+
+
+    # Trajectories plane of the pendulum.
+    function c()
+
+        # Define the parameters
+        g = 9.8  # Acceleration due to gravity (m/s^2)
+        l = 1.0  # Length of the pendulum (m)
+        gamma = 0.5  # Damping coefficient (kg/s)
+        m = 1.0  # Mass of the pendulum (kg)
+        theta0 = pi/5  # Initial angle (rad)
+        theta_dot0 = 0.0 
+        # Define the vector field function for the system of differential equations
+        function vectorfield!(du, u, p, t)
+            theta = u[1]
+            theta_dot = u[2]
+            du[1] = theta_dot
+            du[2] = -g/l * sin(theta) - gamma/m * theta_dot
+        end 
+        
+        # Define the range of theta and theta_dot values
+        theta_range = 0:0.1:10
+        theta_dot_range = 0:0.1:10
+
+
+        pendulum!( du, u, p, t) = -(g/l)sin(u) - (gamma/m)du
+        # Define the time span
+        t_start = -5.0
+        t_end = 5.0
+        tspan = (t_start, t_end)
+
+        # Solve the system of differential equations
+        prob = SecondOrderODEProblem(pendulum!, theta_dot0, theta0, tspan)
+        sol = solve(prob, DPRKN6(), saveat=0.05) # Runge-Kutta-Nyström 6 order numerical method.
+
+        # Extract the angles and angular velocities
+        theta = [odeSolutionTuple[begin] for odeSolutionTuple in sol.u]
+        theta_dot = [odeSolutionTuple[end] for odeSolutionTuple in sol.u]
+
+        function meshgrid(x, y)
+            X = [x for _ in y, x in x]
+            Y = [y for y in y, _ in x]
+            X, Y
+         end
+        
+        # Create a meshgrid of theta and theta_dot values
+        theta_mesh, theta_dot_mesh = meshgrid(theta_range, theta_dot_range)
+        
+        # Initialize the vector field values
+        du_mesh = similar(theta_mesh)
+        println(theta_mesh)
+
+        x = 1:3
+        y = 1:5
+        x' .* ones(5)
+
+        #=
+        5×3 Array{Float64,2}:
+        1.0  2.0  3.0
+        1.0  2.0  3.0
+        1.0  2.0  3.0
+        1.0  2.0  3.0
+        1.0  2.0  3.0
+        =#
+        
+        ones(3)' .* y
+
+        #=
+        5×3 Array{Float64,2}:
+        1.0  1.0  1.0
+        2.0  2.0  2.0
+        3.0  3.0  3.0
+        4.0  4.0  4.0
+        5.0  5.0  5.0
+        =#
+       #=  for i in eachindex(theta_mesh, 1), j in eachindex(theta_mesh, 2)
+            vectorfield!(du_mesh[i, j, :], [theta_mesh[i, j], theta_dot_mesh[i, j]], [], 0)
+        end =#
+        
+        # Create the scene
+        println()
+        # Add the quiver plot of the vector field
+        us = [0.5 for x  in sol.t, _ in sol.t]
+        vs = [-(g/l)sin(u) - (gamma/m)du for u in theta, du in theta_dot]
+        println(vs)
+        f = Figure(size = (800, 800))
+        Axis(f[1, 1], backgroundcolor = "black")
+        strength = vec(sqrt.(theta .^ 2 .+ theta_dot .^ 2))
+
+        arrows!(sol.t, sol.t, theta, theta_dot, arrowsize = 10, lengthscale = 0.3,
+            arrowcolor = strength, linecolor = strength)
+        
+        # Add the scatter plot for the critical point
+   #=      scatter!(
+            scene,
+            [0],
+            [0],
+            zeros(1),
+            markersize = 5,
+            color = :red,
+            marker = :circle,
+            label = "Critical Point (theta=0, theta=0)",
+        ) =#
+        
+        # Set the axes labels and title
+  
+  
+        
+        # Show the scene
+        display(f)
+    end
+
+    function p()
+        f = Figure(size = (800, 800))
+        Axis(f[1, 1], backgroundcolor = "black")
+
+        xs = LinRange(0, 2pi, 20)
+        ys = LinRange(0, 3pi, 20)
+        us = [sin(x) * cos(y) for x in xs, y in ys]
+        vs = [-cos(x) * sin(y) for x in xs, y in ys]
+        strength = vec(sqrt.(us .^ 2 .+ vs .^ 2))
+
+        arrows!(xs, ys, us, vs, arrowsize = 10, lengthscale = 0.3,
+            arrowcolor = strength, linecolor = strength)
+
+        display(f)
+        
+    end
+
+    function t()
+    
+        # Define the differential equation
+        function diff_eq(du, u, p, x)
+            gamma, m, g, l, c = p
+            du[1] = (u[1] / (-gamma/m * u[1] - g/l * sin(x))) 
+        end
+        
+        # Define the parameter values
+        gamma = 0.5  # damping coefficient
+        m = 1.0  # mass
+        g = 9.81  # acceleration due to gravity
+        l = 1.0  # length of the pendulum
+        
+        # Define the initial condition and range of x values
+        u0 = [.5]  # initial condition for y
+        tspan = (-20.0,20.0)
+        
+        f = Figure(size = (800, 800))
+        Axis(f[1, 1])
+
+        for c in -5:1:5
+             # Solve the differential equation
+            prob = ODEProblem(diff_eq, u0, tspan, [gamma, m, g, l, c])
+            sol = solve(prob, Tsit5(), saveat = 0.05)
+            
+            # Plot the solution using Makie  
+            vs = collect(Iterators.flatten(sol.u))
+            lines!(sol.t, vs.+c, color = :blue, linewidth = 2, label = "y(x)")
+        end
+       
+        
+        display(f)
+    end    
+
+
+    function direction_field()
+
+        # Define the parameter values
+        gamma = 0.5  # damping coefficient
+        m = 1.0  # mass
+        g = 9.81  # acceleration due to gravity
+        l = 1.0  # length of the pendulum
+
+        nonStablePoincare(x,y) = Point2f(x*(x^2+y^2-1) - y*(x^2+y^2+1),y*(x^2+y^2-1) + x*(x^2+y^2+1))
+        stableVanDerPaul(x,y) = Point2f(y, -gamma/m * y - g/l * sin(x))
+        semiStable(x,y) = Point2f(-y+ x*(-1+x^2+y^2)^2, x+y*(-1+x^2+y^2)^2) 
+
+        scene = Figure(size = (800, 800))
+        ax1 = Axis(scene[1, 1])
+        #ax2 = Axis(scene[1, 2], backgroundcolor = "black")
+        #ax3 = Axis(scene[1, 3], backgroundcolor = "black")
+        
+        streamplot!(stableVanDerPaul, -15..15, -15..15, colormap = :plasma, 
+            gridsize= (128,128), arrow_size = 6)
+        lines!( -15..15, x -> (1.5)g/l * sin(x + pi), label=L"\theta(t)", color=:orangered, linestyle = :dashdot, linewidth = 2)
+        #streamplot!(ax2, stableVanDerPaul, -4..4, -4..4, colormap = :viridis, 
+            #gridsize= (32,32), arrow_size = 0.07)
+        #streamplot!(ax3, semiStable, -4..4, -4..4, colormap = :rainbow1, 
+            #gridsize= (32,32), arrow_size = 0.07)
+        #hideydecorations!(ax2, grid = false)
+        #hideydecorations!(ax3, grid = false)
+        limits!(ax1, -15, 15, -15, 15)
+        #limits!(ax2, -4, 4, -4, 4)
+        #limits!(ax3, -4, 4, -4, 4)
+        display(scene)
+        save("odeField3.png", scene)
+        
+    end
+
+end # module edo_task_2   
