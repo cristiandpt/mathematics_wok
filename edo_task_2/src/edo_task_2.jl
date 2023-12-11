@@ -520,7 +520,7 @@ end
 
         # Solve the system of differential equations
         prob = SecondOrderODEProblem(pendulum!, theta_dot0, theta0, tspan)
-        sol = solve(prob, DPRKN6(), saveat=0.05) # Runge-Kutta-Nyström 6 order numerical method.
+        sol = solve(prob, DPRKN6(), saveat=0.01) # Runge-Kutta-Nyström 6 order numerical method.
 
         # Extract the angles and angular velocities
         theta = [odeSolutionTuple[begin] for odeSolutionTuple in sol.u]
@@ -735,6 +735,61 @@ end
         display(scene)
         save("odeField3.png", scene)
         
+    end
+
+    function plot_linear_pendulum_system()
+
+        # Define the parameters
+        g = 9.8  # Acceleration due to gravity (m/s^2)
+        l = 1.0  # Length of the pendulum (m)
+        gamma = 0.5  # Damping coefficient (kg/s)
+        m = 1.0  # Mass of the pendulum (kg)
+
+        # Define the initial conditions
+        theta0 = pi/2  # Initial angle (rad)
+        theta_dot0 = 0.0  # Initial angular velocity (rad/s)
+
+         # Define the function for the system of differential equations
+        nonlinear_pendulum!( du, u, p, t) = -(g/l)sin(u) - (gamma/m)du
+        linear_pendulum!( du, u, p, t) = -(g/l)u - (gamma/m)du
+        # Define the time span
+        t_start = 0.0
+        t_end = 10.0
+        tspan = (t_start, t_end)
+
+        # Solve the system of differential equations
+        prob = SecondOrderODEProblem(nonlinear_pendulum!, theta_dot0, theta0, tspan)
+        sol = solve(prob, DPRKN6(), saveat=0.01) # Runge-Kutta-Nyström 6 order numerical method.
+
+        linear_prob = SecondOrderODEProblem(linear_pendulum!, theta_dot0, theta0, tspan)
+        linear_sol = solve(linear_prob, DPRKN6(), saveat=0.01) # Runge-Kutta-Nyström 6 order numerical method.
+
+
+        # Extract the angles and angular velocities
+        theta = [odeSolutionTuple[begin] for odeSolutionTuple in sol.u]
+        theta_dot = [odeSolutionTuple[end] for odeSolutionTuple in sol.u]
+
+        linear_theta = [odeSolutionTuple[begin] for odeSolutionTuple in linear_sol.u]
+        linear_theta_dot = [odeSolutionTuple[end] for odeSolutionTuple in linear_sol.u]
+
+
+        println(theta)
+        fig = Figure()
+        ax = Axis(fig[1, 1])
+
+        function diff_linear_non_linear()  
+            theta .- linear_theta
+        end         
+        text!(.75, 1.25, text = L"\theta(t)", color = :black)
+        lines!(ax, sol.t, theta, label=L"non~linear~\theta(t)")
+        #lines!(ax, sol.t, theta_dot, label=L"\theta^{\prime}(t)")
+        lines!(ax, linear_sol.t, linear_theta, label=L"linear~\theta^{\prime}(t)")
+        #lines!(ax, 0:0.01:1, x -> (g/l)*x, label=L"non~linear~f(t)=t")
+        lines!(ax, linear_sol.t, diff_linear_non_linear(), label=L"diff")
+        fig[1, 2] = Legend(fig, ax, "Pendulum system", framevisible = false)
+        uuid = UUIDs.uuid4()
+        save("$uuid.png", fig)
+        display(fig) 
     end
 
 end # module edo_task_2   
