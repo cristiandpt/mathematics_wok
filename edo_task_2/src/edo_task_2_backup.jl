@@ -406,8 +406,8 @@ end
 
 # Set the parameters
 
-
-function plottingNonNumerialAproximation()
+# Has isue, ploting in reverse
+function plotting_non_numerial_aproximation()
     g = 9.81  # Acceleration due to gravity
     l = 1.0  # Length of the pendulum
     dt = 0.01  # Time step size
@@ -553,7 +553,9 @@ end
 
 
     # Trajectories plane of the pendulum.
-    function c()
+    # This give a x = y function wrapped in a decaing sen function, like as light wave
+    # Fails and incompretion to try to plot vector lines
+    function linear_light_wave()
 
         # Define the parameters
         g = 9.8  # Acceleration due to gravity (m/s^2)
@@ -662,7 +664,7 @@ end
         display(f)
     end
 
-    function p()
+    function exampe_direction_field_with_Sen_cos_cuadrants_from_makie_example()
         f = Figure(size = (800, 800))
         Axis(f[1, 1], backgroundcolor = "black")
 
@@ -679,7 +681,7 @@ end
         
     end
 
-    function t()
+    function ugly_pick_to_try_resolve_the_problem()
     
         # Define the differential equation
         function diff_eq(du, u, p, x)
@@ -715,7 +717,8 @@ end
     end    
 
 
-    function direction_field()
+
+    function non_linear_pendulum_system_direction_field()
 
         # Define the parameter values
         gamma = 0.5  # damping coefficient
@@ -749,7 +752,7 @@ end
         
     end
 
-    function plot_linear_pendulum_system()
+    function plot_linear_pendulum_system_with_diff()
 
         # Define the parameters
         g = 9.8  # Acceleration due to gravity (m/s^2)
@@ -789,7 +792,7 @@ end
         fig = Figure()
         ax = Axis(fig[1, 1])
 
-        function diff_linear_non_linear()  
+        function diff_linear_vs_non_linear()  
             theta .- linear_theta
         end         
         text!(.75, 1.25, text = L"\theta(t)", color = :black)
@@ -804,7 +807,7 @@ end
         display(fig) 
     end
 
-    function plot_linear_pendulum_system_comparation()
+    function plot_linear_pendulum_system_absolute_diff()
 
         # Define the parameters
         g = 9.8  # Acceleration due to gravity (m/s^2)
