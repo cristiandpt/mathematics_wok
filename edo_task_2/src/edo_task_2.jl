@@ -1,14 +1,15 @@
 module edo_task_2
 
-using GLMakie
-using UUIDs
-using LaTeXStrings
-using Roots
-using DifferentialEquations
+# The imported libraries for using in work deveploment.
+using GLMakie                   # Plotting framework
+using UUIDs                     # UUID Generator
+using LaTeXStrings              # For render latex text into the makie plots.
+using Roots                     # For linear equation system solving.
+using DifferentialEquations     # Numerical resolution for differential equations. 
 
 # Define the solution function
 function y_solution(x, a, b, h)
-    return a * cosh((x - b) / a) + h
+    return a * cosh((x - b) / a) + h    # The catenary function definition.
 end
 
 import Base.Math.cosh  # Importing the cosh function
@@ -28,7 +29,7 @@ Calculate the value of the equation f(x) = cosh((x - b) / a) + h.
 The calculated value of the equation f(x) in x.
 
 """
-f = (x, a, b, h) -> cosh((x - b) / a) + h  
+f = (x, a, b, h) -> a*cosh((x - b) / a) + h  
 
 
 function plot_function(a, b, h)
@@ -46,7 +47,7 @@ function plot_function(a, b, h)
     y_values = map( x -> f(x, a, b, h), x_values)
     scatter!(b, f(b, a, b, h), color = :red, markersize = 20, label = "(b, 0)")
     lines!(ax, x_values, y_values, label = "cosh")
-    text!(b + 0.5, 20, text = L"(%$a,%$h)", color = :black)
+    text!(b + 0.5, 20, text = L"(%$b,%$h)", color = :black)
     text!(-4.5, 500, text =  L"f(x)=cosh(\frac{x-b}{a}) + h", color = :black)
     vlines!(ax, [b], color = :red, linestyle = :dash)
     hlines!(ax, [h], xmax = [1], color = :blue, linestyle = :dash)
@@ -56,16 +57,18 @@ function plot_function(a, b, h)
 end  
 
 
+
 function equations_system(x, ci0, ci1)
     a, b, h = x
-
     f0 = cosh((ci0[0] - b) / a) + h - ci0[1] # f(0) = 3
     f1 = cosh((ci1[0] - b) / a) + h - ci1[1] # f(1) = 2
 
     return [f0, f1]
 end
 
-function equations_system_solver()
+
+
+function equations_system_solver(x)
     # Initial guess for the parameters
     x0 = [1.0, 0.0, 0.0]
     equations_system(x)
@@ -209,7 +212,7 @@ function electric_field()
 
     fig = Figure()
     ax1 = Axis(fig[1, 1])
-    qs = [(0.0, 1.0, -1.0), (0.0, -1.0, -1.0), (1.0, 0.0, -1.0)]
+    qs = [(0.0, 0.5, -1.0), (0.0, -0.5, -1.0), (0.66, 0.0, -1.0)]
     #interations = map(q -> plot_electric_field(q[1], q[2], q[3]), qs) 
     xs = range(-2.5, stop = 2.5, length = 2)
     ys = range(-2.5, stop = 2.5, length = 2)
@@ -221,15 +224,22 @@ function electric_field()
         return reduce( (state, t) -> Point2f( state[1] + t[1], state[2] + t[2]), 
                                     map( q -> gradient_p(x, y, q[1], q[2], q[3]), qs), init = Point2f(0, 0))
     end   
-    
-    zs = [es(x, y) for x in xs, y in ys]
-println(zs)
-    
-    arrows!( ax1, xs, ys, x -> es(x[1], x[2]), levels=-2:0.1:2, arrowsize = 7, lengthscale = 0.25 )     
-
+   #=  println("Aqui estoy")
+    zs = [es(x, y) for x in xs, y in ys] =#
+    #println(zs)
+    #arrows!( ax1, xs, ys, x -> es(x[1], x[2]), levels=-2:0.1:2, arrowsize = 7, lengthscale = 0.25 )     
+    figure, ax, pl = streamplot(es, -1.2 .. 2.5, -2.5 .. 2.5, 
+                                colormap = :plasma, 
+                                gridsize= (56,56), 
+                                arrow_size = 10,
+                     )     
 
     #fels, sels = zip(interactions...)
-    
+    # https://beautiful.makie.org/dev/examples/generated/2d/contour/qubit/
+    #fig, ax, pl = streamplot(f, -1.5..1.5, -1.5..1.5, colormap = :magma)
+    # you can also pass a function to `color`, to either return a number or color value
+    #streamplot(fig[1,2], f, -1.5 .. 1.5, -1.5 .. 1.5, color=(p)-> RGBAf(p..., 0.0, 1))
+    #fig
 
    #xs = range(-15, stop = 15, length = 1000)
     #ys = range(-15, stop = 15, length = 1000)
@@ -240,7 +250,9 @@ println(zs)
     #for q in qs
         #streamplot!(fig[1,1], (x, y) -> gradient_p(x, y, q[1], q[2], q[3]), -1.5 .. 1.5, -1.5 .. 1.5, colormap = :magma)
     #end
-    display(fig)
+    uuid = UUIDs.uuid4()
+    save("$uuid.png", figure)
+    display(figure)
 end
 
 
@@ -792,4 +804,182 @@ end
         display(fig) 
     end
 
+    function plot_linear_pendulum_system_comparation()
+
+        # Define the parameters
+        g = 9.8  # Acceleration due to gravity (m/s^2)
+        l = 1.0  # Length of the pendulum (m)
+        gamma = 0.5  # Damping coefficient (kg/s)
+        m = 1.0  # Mass of the pendulum (kg)
+
+        # Define the initial conditions
+        theta0 = pi/20  # Initial angle (rad)
+        theta_dot0 = 0.0  # Initial angular velocity (rad/s)
+
+         # Define the function for the system of differential equations
+        nonlinear_pendulum!( du, u, p, t) = -(g/l)sin(u) - (gamma/m)du
+        linear_pendulum!( du, u, p, t) = -(g/l)u - (gamma/m)du
+        # Define the time span
+        t_start = 0.0
+        t_end = 10.0
+        tspan = (t_start, t_end)
+
+        # Solve the system of differential equations
+        prob = SecondOrderODEProblem(nonlinear_pendulum!, theta_dot0, theta0, tspan)
+        sol = solve(prob, DPRKN6(), saveat=0.01) # Runge-Kutta-Nyström 6 order numerical method.
+
+        linear_prob = SecondOrderODEProblem(linear_pendulum!, theta_dot0, theta0, tspan)
+        linear_sol = solve(linear_prob, DPRKN6(), saveat=0.01) # Runge-Kutta-Nyström 6 order numerical method.
+
+
+        # Extract the angles and angular velocities
+        theta = [odeSolutionTuple[begin] for odeSolutionTuple in sol.u]
+        theta_dot = [odeSolutionTuple[end] for odeSolutionTuple in sol.u]
+
+        linear_theta = [odeSolutionTuple[begin] for odeSolutionTuple in linear_sol.u]
+        linear_theta_dot = [odeSolutionTuple[end] for odeSolutionTuple in linear_sol.u]
+
+
+        println(theta)
+        fig = Figure()
+        ax = Axis(fig[1, 1])
+
+        function absolute_diff()  
+            abs.(theta .- linear_theta)
+        end         
+        text!(.75, 1.25, text = L"\theta(t)", color = :black)
+        lines!(ax, sol.t, theta, label=L"non~linear~\theta(t)")
+        #lines!(ax, sol.t, theta_dot, label=L"\theta^{\prime}(t)")
+        lines!(ax, linear_sol.t, linear_theta, label=L"linear~\theta^{\prime}(t)")
+        #lines!(ax, 0:0.01:1, x -> (g/l)*x, label=L"non~linear~f(t)=t")
+        lines!(ax, linear_sol.t, absolute_diff(), label=L"diff")
+        fig[1, 2] = Legend(fig, ax, "Pendulum system", framevisible = false)
+        uuid = UUIDs.uuid4()
+        save("$uuid.png", fig)
+        display(fig) 
+    end
+
 end # module edo_task_2   
+
+
+#= obra "Física", en la cual abordó el tema del movimiento desde una perspectiva filosófica y conceptual. Su enfoque en la mecánica se diferencia significativamente de las ideas modernas, ya que Aristóteles no utilizó el enfoque matemático que caracteriza a la física clásica y moderna.
+
+Clasificación de Movimientos:
+Aristóteles clasificó el movimiento en varias categorías, incluyendo:
+
+Movimiento Natural: El movimiento intrínseco a los objetos debido a su naturaleza interna. Por ejemplo, una piedra cae hacia abajo debido a su naturaleza pesada.
+Movimiento Violento: El movimiento impuesto a un objeto por una fuerza externa. Por ejemplo, empujar una piedra.
+
+Tipos de Movimiento:
+Aristóteles también clasificó el movimiento en dos tipos:
+
+Movimiento Natural: Aquel que ocurre de acuerdo con la naturaleza inherente de los objetos. Por ejemplo, un objeto pesado cae hacia abajo debido a su naturaleza gravitatoria.
+Movimiento Violento: Aquel que se produce por una fuerza externa y va en contra de la naturaleza intrínseca de un objeto.
+Lugar y Movimiento:
+Aristóteles también abordó la relación entre el lugar y el movimiento. Creía que cada objeto tiene un lugar natural al que tiende a moverse.
+
+Es importante destacar que la filosofía de Aristóteles sobre el movimiento y el cambio fue influencial en su tiempo, pero con el advenimiento de la física moderna, especialmente a partir de las ideas de Galileo y Newton, muchas de sus concepciones fueron revisadas y modificadas. La física clásica proporcionó una nueva comprensión matemática del movimiento y el cambio que superó las ideas aristotélicas en muchos aspectos.
+
+
+
+
+User
+mecanica del movimiento en aristoteles
+ChatGPT
+Aristóteles desarrolló una teoría de la mecánica del movimiento en su obra "Física", en la cual abordó el tema del movimiento desde una perspectiva filosófica y conceptual. Su enfoque en la mecánica se diferencia significativamente de las ideas modernas, ya que Aristóteles no utilizó el enfoque matemático que caracteriza a la física clásica y moderna.
+
+A continuación, se presentan algunos puntos clave de la mecánica del movimiento según Aristóteles:
+
+Clasificación de Movimientos:
+Aristóteles clasificó el movimiento en varias categorías, incluyendo:
+
+Movimiento Natural: El movimiento intrínseco a los objetos debido a su naturaleza interna. Por ejemplo, una piedra cae hacia abajo debido a su naturaleza pesada.
+Movimiento Violento: El movimiento impuesto a un objeto por una fuerza externa. Por ejemplo, empujar una piedra.
+Lugar Natural y Lugar Forzado:
+Aristóteles asoció cada objeto con un "lugar natural" hacia el cual tiende a moverse. Por ejemplo, el lugar natural de un objeto pesado es hacia abajo. Además, un objeto podría ser movido a un "lugar forzado" por una fuerza externa.
+
+Causas del Movimiento:
+Aristóteles identificó cuatro causas para explicar el movimiento:
+
+Causa Material: La sustancia o materia de la cual está hecho el objeto.
+Causa Formal: La forma o estructura del objeto.
+Causa Eficiente: La fuente que causa el movimiento.
+Causa Final: El propósito o el fin del movimiento.
+Velocidad y Aceleración:
+A diferencia de las teorías modernas, Aristóteles no desarrolló una noción cuantitativa de velocidad y aceleración. Su enfoque estaba más orientado hacia las cualidades generales del movimiento que hacia mediciones precisas.
+
+Aristóteles tenía una teoría del movimiento natural que formaba parte de su filosofía física. Su enfoque se basaba en la observación y clasificación de los cambios en el mundo natural. Aquí hay algunos puntos clave sobre el movimiento natural en la filosofía aristotélica:
+
+Tipos de Movimiento:
+
+Movimiento Natural: Era aquel que ocurría de forma inherente a los objetos debido a su naturaleza interna. Aristóteles creía que cada tipo de materia tenía una tendencia intrínseca a moverse de una manera específica. Por ejemplo, un objeto pesado caería hacia abajo porque su naturaleza era buscar su lugar natural en la Tierra.
+Movimiento Violento: Era el movimiento que se producía debido a una fuerza externa que actuaba sobre un objeto y que iba en contra de su naturaleza interna. Por ejemplo, lanzar una piedra hacia arriba.
+Lugar Natural:
+
+Aristóteles asociaba cada tipo de materia con un "lugar natural" hacia el cual tendía a moverse. Por ejemplo, el lugar natural del fuego sería hacia arriba, mientras que el lugar natural de la tierra sería hacia abajo.
+Causas del Movimiento:
+
+Aristóteles identificó cuatro causas para explicar el movimiento:
+Causa Material: La sustancia o materia de la cual está hecho el objeto.
+Causa Formal: La forma o estructura del objeto.
+Causa Eficiente: La fuente que causa el movimiento.
+Causa Final: El propósito o el fin del movimiento.
+Teleología:
+
+La teoría aristotélica del movimiento estaba imbuida de teleología, que es la idea de que los objetos naturales tienen un propósito o finalidad intrínseca. Por ejemplo, un objeto pesado cae hacia abajo para alcanzar su lugar natural.
+Es importante señalar que las ideas de Aristóteles sobre el movimiento natural fueron aceptadas y dominantes durante mucho tiempo en la historia, pero con el advenimiento de la física moderna, especialmente las contribuciones de Galileo y Newton, estas ideas fueron revisadas y reemplazadas por un enfoque más cuantitativo y matemático del movimiento.
+
+La física moderna es el conjunto de teorías y conceptos desarrollados desde el siglo XVII en adelante
+
+La física moderna es el conjunto de teorías y conceptos desarrollados desde el siglo XVII en adelante, que marcaron un cambio significativo en la comprensión del universo. Uno de los primeros y más influyentes científicos en este periodo fue Galileo Galilei. A continuación, se destacan algunas de las contribuciones más importantes de Galileo a la física moderna:
+
+Ley del Movimiento Uniforme:
+
+Galileo desarrolló la ley del movimiento uniforme, que establece que un objeto en movimiento constante seguirá moviéndose a una velocidad constante en línea recta, a menos que una fuerza externa actúe sobre él. Esta idea sentó las bases para el principio de inercia, posteriormente desarrollado por Newton.
+Experimentos sobre la Caída de los Cuerpos:
+
+A través de experimentos cuidadosos, Galileo demostró que los objetos caen al mismo ritmo independientemente de su masa. Este descubrimiento contradecía la visión aristotélica de que los objetos más pesados caen más rápido que los objetos más ligeros.
+Ley de la Inercia:
+
+Galileo formuló la ley de la inercia, que establece que un objeto en reposo permanecerá en reposo y un objeto en movimiento continuará moviéndose a una velocidad constante en línea recta, a menos que una fuerza externa actúe sobre él. Esta ley es una de las tres leyes del movimiento de Newton.
+
+René Descartes, filósofo, matemático y científico del siglo XVII, hizo importantes contribuciones a la mecánica y al estudio del movimiento. A continuación se presentan algunas de las ideas clave de Descartes en este ámbito:
+
+Mecanicismo y Naturaleza como Máquina:
+
+Descartes adoptó un enfoque mecanicista para comprender la naturaleza. Veía el universo como una máquina gigante, compuesta por partículas materiales en movimiento.
+Teoría del Movimiento:
+
+Descartes propuso una teoría del movimiento basada en la colisión de partículas materiales. Según su visión, el movimiento de los cuerpos se debe a la transferencia de movimiento de una partícula a otra mediante colisiones.
+Conservación de la Cantidad de Movimiento:
+
+Descartes formuló la ley de conservación de la cantidad de movimiento. Según esta ley, la cantidad total de movimiento en un sistema aislado se mantiene constante antes y después de las colisiones entre partículas.
+
+Isaac Newton y Gottfried Wilhelm Leibniz fueron dos de los científicos más influyentes en el desarrollo de la física y las matemáticas durante el siglo XVII. Ambos hicieron contribuciones fundamentales al estudio del movimiento y la formulación del cálculo. A continuación, se presentan algunas de sus ideas clave relacionadas con el movimiento:
+
+Isaac Newton:
+Leyes del Movimiento:
+
+Newton formuló las tres leyes del movimiento que son fundamentales en la física clásica:
+Primera Ley (Ley de la Inercia): Un objeto permanece en reposo o en movimiento rectilíneo uniforme a menos que una fuerza externa actúe sobre él.
+Segunda Ley (Fuerza y Aceleración): La fuerza neta aplicada a un objeto es igual a la masa del objeto multiplicada por su aceleración (F = m * a).
+Tercera Ley (Acción y Reacción): Por cada acción, hay una reacción igual y opuesta.
+Ley de la Gravitación Universal:
+
+Newton formuló la ley de la gravitación universal, que describe la atracción entre dos objetos debido a sus masas y la distancia entre ellos.
+Desarrollo del Cálculo:
+
+Newton contribuyó al desarrollo del cálculo, especialmente en la formulación de métodos para trabajar con derivadas e integrales. Su trabajo se centró en problemas de movimiento y cambio.
+Gottfried Wilhelm Leibniz:
+Desarrollo Independiente del Cálculo:
+
+Leibniz también contribuyó al desarrollo del cálculo de manera independiente de Newton. Introdujo notaciones y conceptos fundamentales, como el uso de la notación "dy/dx" para representar derivadas.
+Principio de la Conservación de la Energía:
+
+Leibniz propuso la idea del principio de la conservación de la energía, que sostiene que la cantidad total de energía en un sistema aislado se mantiene constante.
+Teoría Dinámica de la Materia:
+
+Leibniz desarrolló una teoría dinámica de la materia en la que consideraba que las partículas fundamentales poseían una especie de "fuerza viva", que luego influyó en el concepto de energía cinética.
+Concepto de Mónadas:
+
+Leibniz introdujo el concepto de mónadas, entidades indivisibles que constituían la realidad fundamental. Este concepto influyó en su visión de la dinámica y la naturaleza. =#
