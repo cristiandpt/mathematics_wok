@@ -361,8 +361,8 @@ function plot_pendulum_system()
 
         # Define the parameters
         g = 9.8  # Acceleration due to gravity (m/s^2)
-        l = 1.0  # Length of the pendulum (m)
-        gamma = 0.5  # Damping coefficient (kg/s)
+        l = 0.005  # Length of the pendulum (m)
+        gamma = 1  # Damping coefficient (kg/s)
         m = 1.0  # Mass of the pendulum (kg)
 
         # Define the initial conditions
@@ -437,7 +437,7 @@ function plot_pendulum_system()
         m = 1.0  # Mass of the pendulum (kg)
 
         # Define the initial conditions
-        theta0 = pi/2  # Initial angle (rad)
+        theta0 = pi/16  # Initial angle (rad)
         theta_dot0 = 0.0  # Initial angular velocity (rad/s)
 
          # Define the function for the system of differential equations
@@ -460,7 +460,6 @@ function plot_pendulum_system()
 
         linear_theta = [odeSolutionTuple[begin] for odeSolutionTuple in linear_sol.u]
 
-        println(theta)
         fig = Figure()
         ax = Axis(fig[1, 1])
 
@@ -473,7 +472,7 @@ function plot_pendulum_system()
         text!(.75, 1.25, text = L"\theta(t)", color = :black)
         lines!(ax, non_linear_sol.t, non_linear_theta, label=L"non~linear~\theta(t)")
         lines!(ax, linear_sol.t, linear_theta, label=L"linear~\theta^{\prime}(t)")
-        lines!(ax, linear_sol.t, diff_linear_non_linear(), label=L"diff")
+        lines!(ax, linear_sol.t, diff_linear_vs_non_linear(), label=L"diff")
         fig[1, 2] = Legend(fig, ax, "Pendulum system", framevisible = false)
         uuid = UUIDs.uuid4()     # Generates a unique id for each image
         save("$uuid.png", fig)   # Saves the image
@@ -491,7 +490,7 @@ function plot_pendulum_system()
         m = 1.0  # Mass of the pendulum (kg)
 
         # Define the initial conditions
-        theta0 = pi/2  # Initial angle (rad)
+        theta0 = pi/16  # Initial angle (rad)
         theta_dot0 = 0.0  # Initial angular velocity (rad/s)
 
          # Define the function for the system of differential equations
